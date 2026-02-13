@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TradeApp — Análise de Ações</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Spectral:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="bg-orbit"></div>
+    <div class="bg-grid"></div>
+
+    <main class="shell">
+      <header class="hero">
+        <div class="hero__copy">
+          <p class="eyebrow">TradeApp Intelligence</p>
+          <h1>Versão web do seu analisador de ações.</h1>
+          <p class="sub">
+            Faça consultas rápidas e visualize fundamentos, indicadores e a análise do Claude
+            em um painel único.
+          </p>
+        </div>
+        <div class="hero__card">
+          <form method="post" class="form">
+            <label>
+              Ticker
+              <input type="text" name="ticker" placeholder="Ex: AAPL" required />
+            </label>
+            <label>
+              Valor a investir (USD)
+              <input type="number" name="valor" placeholder="1000" step="0.01" min="0.01" required />
+            </label>
+            <button type="submit">Gerar análise</button>
+            {% if erro %}
+            <p class="error">{{ erro }}</p>
+            {% endif %}
+          </form>
+        </div>
+      </header>
+
+      {% if resultado %}
+      <section class="panel">
+        <div class="panel__header">
+          <div>
+            <h2>Relatório — {{ resultado.ticker }}</h2>
+            <p class="muted">Atualizado em {{ resultado.data }}</p>
+          </div>
+          <div class="tag">
+            {{ resultado.dados.fonte or 'Fonte não informada' }}
+          </div>
+        </div>
+
+        <div class="grid two">
+          <article class="card highlight">
+            <h3>Cotação Atual</h3>
+            <div class="price">
+              ${{ '%.2f'|format(resultado.dados.preco) }}
+              <span class="delta {{ 'good' if resultado.dados.variacao >= 0 else 'bad' }}">
+                {{ '%+.2f'|format(resultado.dados.variacao) }}%
+              </span>
+            </div>
+            <ul class="stats">
+              <li>Volume <strong>{{ "{:,}".format(resultado.dados.volume or 0) }}</strong></li>
+              <li>Abertura <strong>${{ '%.2f'|format(resultado.dados.abertura or 0) }}</strong></li>
+              <li>Máxima <strong>${{ '%.2f'|format(resultado.dados.alta or 0) }}</strong></li>
+              <li>Mínima <strong>${{ '%.2f'|format(resultado.dados.baixa or 0) }}</strong></li>
+              <li>Fech. anterior <strong>${{ '%.2f'|format(resultado.dados.fechamento_anterior or 0) }}</strong></li>
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Indicadores Técnicos</h3>
+            <div class="badge-row">
+              <span class="badge {{ resultado.rsi_class }}">RSI {{ '%.2f'|format(resultado.rsi) }}</span>
+              <span class="badge {{ resultado.tendencia_class }}">{{ resultado.tendencia }}</span>
+            </div>
+            <ul class="stats">
+              <li>SMA 20 <strong>${{ '%.2f'|format(resultado.dados.sma_20 or 0) }}</strong></li>
+              <li>SMA 50 <strong>${{ '%.2f'|format(resultado.dados.sma_50 or 0) }}</strong></li>
+              <li>Range 52W
+                <strong>${{ '%.2f'|format(resultado.minimo_52w) }} - ${{ '%.2f'|format(resultado.maximo_52w) }}</strong>
+              </li>
+              {% if resultado.posicao_52w is not none %}
+              <li>Posição no range <strong>{{ '%.1f'|format(resultado.posicao_52w) }}%</strong></li>
+              {% endif %}
+            </ul>
+          </article>
+        </div>
+
+        <div class="grid two">
+          <article class="card">
+            <h3>Fundamentos</h3>
+            <div class="score {{ 'good' if resultado.fundamentos.score_fundamental >= 70 else 'warn' if resultado.fundamentos.score_fundamental >= 50 else 'bad' }}">
+              Score {{ resultado.fundamentos.score_fundamental }}/100 — {{ resultado.fundamentos.avaliacao|upper }}
+            </div>
+            <ul class="metrics">
+              {% for m in resultado.metricas %}
+              <li class="{{ m.classe }}">
+                <span>{{ m.nome }}</span>
+                <strong>{{ m.valor }}</strong>
+                <em>{{ m.avaliacao }}</em>
+              </li>
+              {% endfor %}
+            </ul>
+          </article>
+
+          <article class="card">
+            <h3>Simulação de Investimento</h3>
+            <ul class="stats">
+              <li>Capital disponível <strong>${{ '{:,.2f}'.format(resultado.valor) }}</strong></li>
+              <li>Preço por ação <strong>${{ '%.2f'|format(resultado.dados.preco) }}</strong></li>
+              <li>Quantidade de ações <strong>{{ '%.4f'|format(resultado.acaoes) }}</strong></li>
+              <li>Valor total <strong>${{ '{:,.2f}'.format(resultado.acaoes * resultado.dados.preco) }}</strong></li>
+            </ul>
+          </article>
+        </div>
+
+        <article class="card wide">
+          <h3>Análise IA (Claude)</h3>
+          {% if resultado.analise %}
+          <p class="analysis">{{ resultado.analise }}</p>
+          {% else %}
+          <p class="muted">Análise indisponível (verifique a chave da API).</p>
+          {% endif %}
+        </article>
+      </section>
+      {% endif %}
+    </main>
+  </body>
+</html>
